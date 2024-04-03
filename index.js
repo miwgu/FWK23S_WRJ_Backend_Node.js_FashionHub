@@ -1,9 +1,19 @@
 let express = require('express');
 let app = express();
 const cors = require('cors');
+const bodyParser = require('body-parser');
 
 // To avoid cors problem
 app.use(cors());
+//parse JSON
+//app.use(express.json());
+app.use(bodyParser.json());
+
+app.use((req, res, next) => {
+    console.log('Received raw body:', req.body);
+    next();
+});
+
 app.listen(8080, ()=>{
     console.log("Server runs:port 8080");
 });
@@ -23,13 +33,23 @@ const myLogger =  (req, res, next)=> {
     res.sendFile(__dirname+ "/documentation.html");
   });
 
-  const mysql = require("mysql2");
-con = mysql.createConnection({
+ const mysql = require("mysql2");
+ con = mysql.createConnection({
     host: "localhost",
     user: "root",
     password: "Miwakodori23!",
     database: "fashionhub_db2024", 
+}); 
+
+/* const mysql =require("mysql2/promise");
+function connectToDatabase(){
+    return mysql.createConnection({
+        host: "localhost",
+        user: "root",
+        password: "Miwakodori23!",
+        database: "fashionhub_db2024", 
 });
+} */
 
 app.use(express.json());
 
@@ -131,7 +151,7 @@ app.post("/login", function (req, res) {
                     city: results[0].city,
                     postcode: results[0].postcode,           
                     //role: results[0].role,
-                    exp: Math.floor(Date.now()/1000) + (60*0.5) // time-limit token: current time + 1hour
+                    exp: Math.floor(Date.now()/1000) + (60*2) // time-limit token: current time + 1hour
                 };
                 let token = signJWT(payload);
                 res.json(token);
@@ -152,10 +172,10 @@ app.post("/login", function (req, res) {
     let token = authHeader.slice(7);
     try{
         let decoded =decodeJWT(token);
-        console.log("req.decoded"+JSON.stringify(req.decoded))
-        console.log("decoded"+JSON.stringify(decoded))
+        console.log("req.decoded: "+JSON.stringify(req.decoded))
+        console.log("decoded: "+JSON.stringify(decoded))
         req.decoded =decoded;
-        console.log("req.decoded"+JSON.stringify(req.decoded))
+        console.log("req.decoded:  "+JSON.stringify(req.decoded))
        if (decoded===null) {
             return res.status(401).send("Bad request! Decoded token is null. (Check: token is expired, fail token or token not set )")
         }
@@ -336,9 +356,6 @@ app.post(customerPath+"/signup", function (req, res) {
 });
 
 
-
-
-
 /**
  * fashion_products endpoints
  */
@@ -394,5 +411,154 @@ app.get(productPath+"/byid/:id",  async (req, res) =>{
         }
     });
 });
-  
 
+
+/* const { check, validationResult } = require('express-validator');
+
+        const validateOrder = [
+            // Example validation rules using check function
+            check('customerId').isInt().withMessage('Customer ID must be an integer'),
+            check('products.*.id').isInt().withMessage('Product ID must be an integer'),
+            check('products.*.title').isString().notEmpty().withMessage('Product title is required'),
+            check('products.*.price').isNumeric().withMessage('Product price must be a number'),
+            check('products.*.quantity').isNumeric().withMessage('Product quantity must be a number'),
+            // Add more validation rules as needed
+          ]; */
+/**
+ * Orders
+ */
+let ordersPath="/orders"
+
+/* app.post(ordersPath+"/add/:customerId",authToken, async (req, res) => {
+    try {
+        // Establish connection using await
+        //const connection = await connectToDatabase();
+        const customerId= req.params.customerId;
+        const { products } = req.body;
+
+        // Validate customerId and products
+         console.log("Received body:", req.body);
+        console.log("customerId",customerId)
+        console.log("ProductsArray", Array.isArray(products)) //false:  the data is being sent as JSON string instead of a JavaScript object.
+        if (!customerId || !Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({ error: 'Invalid request. Missing customerId or products array.' });
+        }
+
+        // Calculate total amount
+        const totalAmount = products.reduce((total, product) => total + (product.price * product.quantity), 0);
+        console.log("typeof totalAmount:", typeof totalAmount);
+
+        // Save order to the database
+         const queryResult =  con.query('INSERT INTO orders (customer_id, total_amount) VALUES (?, ?)', [customerId, totalAmount]);
+        console.log("queryResult", queryResult);
+        //-----This return
+        const resultCast = con.query('SELECT CAST(LAST_INSERT_ID() AS UNSIGNED) as insertId');
+        console.log("resultCast", resultCast)
+        const orderId = resultCast.insertId; // undefined
+        //const [{ insertId: orderId }]  = con.query('SELECT LAST_INSERT_ID() as insertId');
+        
+        
+
+
+        // One to Many: Order_id has many orderitems(products) Iterate through products and save each one to order_items table
+        for (const product of products) {
+            console.log("typeof orderId:", typeof orderId);//expected INT
+            console.log("typeof product.id:", typeof product.id);//expected INT
+            console.log("typeof quantity:", typeof product.quantity);//expected INT 
+
+             con.query('INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)', [orderId, product.id, product.quantity]);
+        }
+        
+        // If the order is successfully saved, respond with success message
+        res.status(201).json({ message: 'Order created successfully' }); */
+
+        //--------------------------------------------------------
+        
+        /* const insertSql =  con.query('INSERT INTO orders (customer_id, total_amount) VALUES (?, ?)', [customerId, totalAmount]);
+        con.query( insertSql,
+            (error, results)=>{
+
+                if(error){
+                    console.error("Adding order Error!: "+ error);//error detail
+                    
+                    return res.status(500).send("500: Error adding order")
+                }
+
+              console.log(results)
+
+              let selectSql = 'SELECT LAST_INSERT_ID() as insertId';
+
+              con.query(selectSql, (error, results) => {
+                if(error){
+                    console.error("Error retrieving last insert ID: " + err);
+                    return res.status(500).send("500: Error retrieving orderID");
+                }
+                
+                let i=0;
+                for (const product of products ) {
+                    console.log("typeof orderId:", typeof results[i].insertId);//expected INT
+                    console.log("typeof product.id:", typeof product.id);//expected INT
+                    console.log("typeof quantity:", typeof product.quantity);//expected INT 
+        
+                     con.query('INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)', [results[i].insertId, product.id, product.quantity]);
+                    i++;
+                    }
+                res.status(201).json({ message: 'Order created successfully' });
+              
+            }
+       )} 
+      ); */
+      //------------------------------------------------
+
+   /*  } catch (error) {
+        console.error('Error creating order:', error);
+        res.status(500).json({ error: 'Failed to create order' });
+    }
+});  */
+
+
+//const ordersPath = "/orders";
+
+app.post(ordersPath + "/add/:customerId", authToken,  (req, res) => {
+    try {
+        const customerId = req.params.customerId;
+        const { products } = req.body;
+
+        // Validate customerId and products
+        if (!customerId || !Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({ error: 'Invalid request. Missing customerId or products array.' });
+        }
+
+        // Calculate total amount
+        const totalAmount = products.reduce((total, product) => total + (product.price * product.quantity), 0);
+
+        // Save order to the database
+        const insertOrderQuery = 'INSERT INTO orders (customer_id, total_amount) VALUES (?, ?)';
+        con.query(insertOrderQuery, [customerId, totalAmount], (orderInsertErr, orderInsertResults) => {
+            if (orderInsertErr) {
+                console.error('Error inserting order:', orderInsertErr);
+                return res.status(500).json({ error: 'Failed to create order' });
+            }
+
+            const orderId = orderInsertResults.insertId;
+            console.log("orderID:", orderId)
+
+            // Insert order items
+            const insertOrderItemsQuery = 'INSERT INTO order_items (order_id, product_id, quantity) VALUES ?'; //(?,?,?) it is incorrect
+            const values = products.map(product => [orderId, product.id, product.quantity]);
+            console.log("Values:", values)
+
+            con.query(insertOrderItemsQuery, [values], (orderItemsInsertErr, orderItemsInsertResults) => {
+                if (orderItemsInsertErr) {
+                    console.error('Error inserting order items:', orderItemsInsertErr);
+                    return res.status(500).json({ error: 'Failed to create order' });
+                }
+
+                res.status(201).json({ message: 'Order created successfully' });
+            });
+        });
+    } catch (error) {
+        console.error('Error creating order:', error);
+        res.status(500).json({ error: 'Failed to create order' });
+    }
+});
