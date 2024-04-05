@@ -37,19 +37,9 @@ const myLogger =  (req, res, next)=> {
  con = mysql.createConnection({
     host: "localhost",
     user: "root",
-    password: "Miwakodori23!",
+    password: "XXXX",
     database: "fashionhub_db2024", 
 }); 
-
-/* const mysql =require("mysql2/promise");
-function connectToDatabase(){
-    return mysql.createConnection({
-        host: "localhost",
-        user: "root",
-        password: "Miwakodori23!",
-        database: "fashionhub_db2024", 
-});
-} */
 
 app.use(express.json());
 
@@ -413,111 +403,10 @@ app.get(productPath+"/byid/:id",  async (req, res) =>{
 });
 
 
-/* const { check, validationResult } = require('express-validator');
-
-        const validateOrder = [
-            // Example validation rules using check function
-            check('customerId').isInt().withMessage('Customer ID must be an integer'),
-            check('products.*.id').isInt().withMessage('Product ID must be an integer'),
-            check('products.*.title').isString().notEmpty().withMessage('Product title is required'),
-            check('products.*.price').isNumeric().withMessage('Product price must be a number'),
-            check('products.*.quantity').isNumeric().withMessage('Product quantity must be a number'),
-            // Add more validation rules as needed
-          ]; */
 /**
  * Orders
  */
 let ordersPath="/orders"
-
-/* app.post(ordersPath+"/add/:customerId",authToken, async (req, res) => {
-    try {
-        // Establish connection using await
-        //const connection = await connectToDatabase();
-        const customerId= req.params.customerId;
-        const { products } = req.body;
-
-        // Validate customerId and products
-         console.log("Received body:", req.body);
-        console.log("customerId",customerId)
-        console.log("ProductsArray", Array.isArray(products)) //false:  the data is being sent as JSON string instead of a JavaScript object.
-        if (!customerId || !Array.isArray(products) || products.length === 0) {
-            return res.status(400).json({ error: 'Invalid request. Missing customerId or products array.' });
-        }
-
-        // Calculate total amount
-        const totalAmount = products.reduce((total, product) => total + (product.price * product.quantity), 0);
-        console.log("typeof totalAmount:", typeof totalAmount);
-
-        // Save order to the database
-         const queryResult =  con.query('INSERT INTO orders (customer_id, total_amount) VALUES (?, ?)', [customerId, totalAmount]);
-        console.log("queryResult", queryResult);
-        //-----This return
-        const resultCast = con.query('SELECT CAST(LAST_INSERT_ID() AS UNSIGNED) as insertId');
-        console.log("resultCast", resultCast)
-        const orderId = resultCast.insertId; // undefined
-        //const [{ insertId: orderId }]  = con.query('SELECT LAST_INSERT_ID() as insertId');
-        
-        
-
-
-        // One to Many: Order_id has many orderitems(products) Iterate through products and save each one to order_items table
-        for (const product of products) {
-            console.log("typeof orderId:", typeof orderId);//expected INT
-            console.log("typeof product.id:", typeof product.id);//expected INT
-            console.log("typeof quantity:", typeof product.quantity);//expected INT 
-
-             con.query('INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)', [orderId, product.id, product.quantity]);
-        }
-        
-        // If the order is successfully saved, respond with success message
-        res.status(201).json({ message: 'Order created successfully' }); */
-
-        //--------------------------------------------------------
-        
-        /* const insertSql =  con.query('INSERT INTO orders (customer_id, total_amount) VALUES (?, ?)', [customerId, totalAmount]);
-        con.query( insertSql,
-            (error, results)=>{
-
-                if(error){
-                    console.error("Adding order Error!: "+ error);//error detail
-                    
-                    return res.status(500).send("500: Error adding order")
-                }
-
-              console.log(results)
-
-              let selectSql = 'SELECT LAST_INSERT_ID() as insertId';
-
-              con.query(selectSql, (error, results) => {
-                if(error){
-                    console.error("Error retrieving last insert ID: " + err);
-                    return res.status(500).send("500: Error retrieving orderID");
-                }
-                
-                let i=0;
-                for (const product of products ) {
-                    console.log("typeof orderId:", typeof results[i].insertId);//expected INT
-                    console.log("typeof product.id:", typeof product.id);//expected INT
-                    console.log("typeof quantity:", typeof product.quantity);//expected INT 
-        
-                     con.query('INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)', [results[i].insertId, product.id, product.quantity]);
-                    i++;
-                    }
-                res.status(201).json({ message: 'Order created successfully' });
-              
-            }
-       )} 
-      ); */
-      //------------------------------------------------
-
-   /*  } catch (error) {
-        console.error('Error creating order:', error);
-        res.status(500).json({ error: 'Failed to create order' });
-    }
-});  */
-
-
-//const ordersPath = "/orders";
 
 app.post(ordersPath + "/add/:customerId", authToken,  (req, res) => {
     try {
