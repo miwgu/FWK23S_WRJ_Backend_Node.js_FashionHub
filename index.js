@@ -151,7 +151,7 @@ app.post("/login", function (req, res) {
                     city: results[0].city,
                     postcode: results[0].postcode,           
                     //role: results[0].role,
-                    exp: Math.floor(Date.now()/1000) + (60*2) // time-limit token: current time + 1hour
+                    exp: Math.floor(Date.now()/1000) + (60*0.5) // time-limit token: current time + 1hour
                 };
                 let token = signJWT(payload);
                 res.json(token);
@@ -561,4 +561,42 @@ app.post(ordersPath + "/add/:customerId", authToken,  (req, res) => {
         console.error('Error creating order:', error);
         res.status(500).json({ error: 'Failed to create order' });
     }
+});
+
+
+app.get(ordersPath+"/bycustomerid/:id",  authToken, (req, res) =>{
+    const {id} = req.params;
+    let sql = "SELECT * FROM orders WHERE customer_id=?";
+
+    con.query(sql, [id], (error, results)=>{
+        if(error){
+            console.error('Error searching for orders by customer ID: error')
+            res.status(500).json({ error: 'Internal server error' });
+        } else if(results.length>0){
+            res.status(200).send(results);
+        } else{
+            res.status(404).send("404: Not found!");
+        }
+    });
+});
+
+/**
+ * I need controll by role(Just now there is no
+ * role)
+ */
+
+app.get(ordersPath+"/byid/:id",  (req, res) =>{
+    const {id} = req.params;
+    let sql = "SELECT * FROM orders WHERE id=?";
+
+    con.query(sql, [id], (error, results)=>{
+        if(error){
+            console.error('Error searching for orders by customer ID: error')
+            res.status(500).json({ error: 'Internal server error' });
+        } else if(results.length>0){
+            res.status(200).send(results);
+        } else{
+            res.status(404).send("404: Not found!");
+        }
+    });
 });
