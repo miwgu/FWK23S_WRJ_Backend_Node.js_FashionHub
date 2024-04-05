@@ -1,6 +1,6 @@
 ﻿# Backend_Node.js_FashionHub
 ##  Endpoint 
-X routes 
+10 routes 
 check documentation.html 
 
 ## How to start (Node.js)
