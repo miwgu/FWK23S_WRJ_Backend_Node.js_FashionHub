@@ -1,12 +1,18 @@
-let express = require('express');
-let app = express();
+const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const mysql = require("mysql2");
+const dotenv = require('dotenv'); // npm i dotenv ->To bring token i .env install dotenv
+const crypto = require('crypto');
+const jwt = require("jsonwebtoken"); // npm i jsonwebtoken
+
+dotenv.config();
+
+const app = express();
+
 
 // To avoid cors problem
 app.use(cors());
-//parse JSON
-//app.use(express.json());
 app.use(bodyParser.json());
 
 app.use((req, res, next) => {
@@ -14,9 +20,7 @@ app.use((req, res, next) => {
     next();
 });
 
-app.listen(8080, ()=>{
-    console.log("Server runs:port 8080");
-});
+app.use(express.json())
 
 
 const myLogger =  (req, res, next)=> {
@@ -27,27 +31,32 @@ const myLogger =  (req, res, next)=> {
     next()
   }
   
-  app.use(myLogger)
+  app.use(myLogger);
 
-  app.get("/", function(res){
-    res.sendFile(__dirname+ "/documentation.html");
-  });
 
- const mysql = require("mysql2");
- con = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "XXXX",
-    database: "fashionhub_db2024", 
-}); 
+  app.listen(8080, ()=>{
+    console.log("Server runs:port 8080");
+});
 
-app.use(express.json());
 
-const dotenv = require('dotenv'); // npm i dotenv ->To bring token i .env install dotenv
-dotenv.config();
-const crypto = require('crypto');
-const jwt = require("jsonwebtoken"); // npm i jsonwebtoken
+
 const { error } = require('console');
+
+/**
+ * Database connection
+ */
+const con = mysql.createConnection({
+   host: "localhost",
+   user: "root",
+   password: "root",
+   database: "fashionhub_db2024", 
+});
+
+/**
+ * Function hashSalting salt password
+ * @param {*} password 
+ * @returns 
+ */
 
 function hashSalting(password){
     const salt = crypto.randomBytes(16).toString('hex');
@@ -97,7 +106,46 @@ let secretKey= () =>{
  }
 
  /**
-  * Login
+  * Function authToken: Authentication token
+  * @param {*} req 
+  * @param {*} res 
+  * @param {*} next 
+  * @returns 
+  */
+
+ function authToken (req, res, next){
+    let authHeader = req.headers["authorization"];
+    if (authHeader === undefined){
+        return res.status(400).send("Bad request! Auth header is undefined.");
+    }
+
+
+    let token = authHeader.slice(7);
+    try{
+        let decoded =decodeJWT(token);
+        console.log("req.decoded: "+JSON.stringify(req.decoded))
+        console.log("decoded: "+JSON.stringify(decoded))
+        req.decoded =decoded;
+        console.log("req.decoded:  "+JSON.stringify(req.decoded))
+       if (decoded===null) {
+            return res.status(401).send("Bad request! Decoded token is null. (Check: token is expired, fail token or token not set )")
+        }
+        next(); // Go to next middleware or route handler
+    } catch(error){
+        console.log(error);
+        return res.status(401).send("Invalid Authentication Token")
+    }
+ }
+
+
+ //------------------Endpoints---------------------------------------
+
+ app.get("/", function(res){
+    res.sendFile(__dirname+ "/documentation.html");
+  });
+
+ /**
+  * Login : login with email and password and generate jwt
   */
 
 app.post("/login", function (req, res) {
@@ -151,33 +199,6 @@ app.post("/login", function (req, res) {
         }
     );
 });
-
- function authToken (req, res, next){
-    let authHeader = req.headers["authorization"];
-    if (authHeader === undefined){
-        return res.status(400).send("Bad request! Auth header is undefined.");
-    }
-
-
-    let token = authHeader.slice(7);
-    try{
-        let decoded =decodeJWT(token);
-        console.log("req.decoded: "+JSON.stringify(req.decoded))
-        console.log("decoded: "+JSON.stringify(decoded))
-        req.decoded =decoded;
-        console.log("req.decoded:  "+JSON.stringify(req.decoded))
-       if (decoded===null) {
-            return res.status(401).send("Bad request! Decoded token is null. (Check: token is expired, fail token or token not set )")
-        }
-        next(); // Go to next middleware or route handler
-    } catch(error){
-        console.log(error);
-        return res.status(401).send("Invalid Authentication Token")
-    }
- }
-
-
-//JWT end--------------------------
 
 
  /**
@@ -408,6 +429,10 @@ app.get(productPath+"/byid/:id",  async (req, res) =>{
  */
 let ordersPath="/orders"
 
+/**
+ * Post order by customerId: Add an order into orders table and order_items table
+ */
+
 app.post(ordersPath + "/add/:customerId", authToken,  (req, res) => {
     try {
         const customerId = req.params.customerId;
@@ -452,6 +477,9 @@ app.post(ordersPath + "/add/:customerId", authToken,  (req, res) => {
     }
 });
 
+/**
+ * Get order by customer Id
+ */
 
 app.get(ordersPath+"/bycustomerid/:id",  authToken, (req, res) =>{
     const {id} = req.params;
@@ -473,7 +501,9 @@ app.get(ordersPath+"/bycustomerid/:id",  authToken, (req, res) =>{
  * I need controll by role(Just now there is no
  * role)
  */
-
+/**
+ * Get order by id
+ */
 app.get(ordersPath+"/byid/:id",  (req, res) =>{
     const {id} = req.params;
     let sql = "SELECT * FROM orders WHERE id=?";
